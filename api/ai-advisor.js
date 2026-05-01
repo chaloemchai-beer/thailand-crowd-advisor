@@ -1,5 +1,9 @@
 const allowedAiModels = new Set(["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"]);
 
+export const config = {
+  maxDuration: 30,
+};
+
 const publicAiError = (status, message = "AI service is temporarily unavailable") => ({
   status,
   body: { error: message },
@@ -21,6 +25,31 @@ const mapGeminiError = (status, message = "") => {
   return publicAiError(status || 502);
 };
 
+const readBody = async (req) => {
+  if (req.body && typeof req.body === "object") return req.body;
+  if (typeof req.body === "string") {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  const raw = Buffer.concat(chunks).toString("utf8");
+  if (!raw) return {};
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+};
+
 export default async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -38,12 +67,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const prompt = String(req.body?.prompt ?? "").slice(0, 12_000);
-    const requestedModel = typeof req.body?.model === "string" ? req.body.model : fallbackModel;
+    const body = await readBody(req);
+    const prompt = String(body?.prompt ?? "").slice(0, 12_000);
+    const requestedModel = typeof body?.model === "string" ? body.model : fallbackModel;
     const selectedModel = allowedAiModels.has(requestedModel) ? requestedModel : fallbackModel;
-    const maxOutputTokens = Math.min(Math.max(Number(req.body?.maxOutputTokens ?? 420), 128), 6000);
-    const temperature = Math.min(Math.max(Number(req.body?.temperature ?? 0.35), 0), 1);
-    const responseMimeType = typeof req.body?.responseMimeType === "string" ? req.body.responseMimeType : undefined;
+    const maxOutputTokens = Math.min(Math.max(Number(body?.maxOutputTokens ?? 420), 128), 6000);
+    const temperature = Math.min(Math.max(Number(body?.temperature ?? 0.35), 0), 1);
+    const responseMimeType = typeof body?.responseMimeType === "string" ? body.responseMimeType : undefined;
 
     if (!prompt.trim()) {
       res.status(400).json({ error: "Missing prompt" });

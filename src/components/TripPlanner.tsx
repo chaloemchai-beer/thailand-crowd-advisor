@@ -7,7 +7,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { destinations } from "@/data/destinations";
 import type { LlmModelId } from "@/lib/llmModels";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { requestTripPlan, saveTripPlan, type TripPlan, type TripPlannerInput } from "@/lib/tripPlanner";
+import {
+  getMaxTripEndDate,
+  getTripDayCount,
+  MAX_TRIP_DAYS,
+  normalizeTripPlannerInput,
+  requestTripPlan,
+  saveTripPlan,
+  type TripPlan,
+  type TripPlannerInput,
+} from "@/lib/tripPlanner";
 
 const travelStyles = [
   { value: "relaxed", label: "ชิล เดินน้อย" },
@@ -76,7 +85,7 @@ export const TripPlanner = ({ selectedModel }: { selectedModel: LlmModelId }) =>
   const [isSaving, setIsSaving] = useState(false);
 
   const updateInput = <K extends keyof TripPlannerInput>(key: K, value: TripPlannerInput[K]) => {
-    setInput((current) => ({ ...current, [key]: value }));
+    setInput((current) => normalizeTripPlannerInput({ ...current, [key]: value }));
   };
 
   const toggleInterest = (value: string) => {
@@ -94,12 +103,19 @@ export const TripPlanner = ({ selectedModel }: { selectedModel: LlmModelId }) =>
     setSavedId(undefined);
 
     try {
-      const normalizedInput = {
+      const normalizedInput = normalizeTripPlannerInput({
         ...input,
         travelersCount: Math.max(1, Number(input.travelersCount) || 1),
         budget: Math.max(0, Number(input.budget) || 0),
         interests: customInterest.trim() ? [...input.interests, customInterest.trim()] : input.interests,
-      };
+      });
+
+      if (getTripDayCount(normalizedInput.startDate, normalizedInput.endDate) > MAX_TRIP_DAYS) {
+        setInput(normalizedInput);
+        setStatus(`เลือกได้สูงสุด ${MAX_TRIP_DAYS} วันต่อครั้ง`);
+        return;
+      }
+
       const { plan: nextPlan, model } = await requestTripPlan(normalizedInput, selectedModel);
       setPlan(nextPlan);
 
@@ -136,7 +152,7 @@ export const TripPlanner = ({ selectedModel }: { selectedModel: LlmModelId }) =>
               กรอกวันเดินทาง สถานที่สนใจ งบประมาณ และรูปแบบการเที่ยว ระบบจะสร้างแผนรายวันพร้อมบันทึกลง Supabase
             </p>
             <div className="mt-4 inline-flex rounded-full border border-white/10 bg-background/60 px-3 py-1.5 text-xs font-bold text-neon-cyan">
-              Model: {selectedModel}
+              Model: {selectedModel} · สูงสุด {MAX_TRIP_DAYS} วัน
             </div>
           </div>
 
@@ -156,6 +172,8 @@ export const TripPlanner = ({ selectedModel }: { selectedModel: LlmModelId }) =>
                 <Input
                   type="date"
                   value={input.endDate}
+                  min={input.startDate}
+                  max={getMaxTripEndDate(input.startDate)}
                   onChange={(event) => updateInput("endDate", event.target.value)}
                   className="border-white/10 bg-background/60 text-foreground"
                 />

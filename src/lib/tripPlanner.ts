@@ -2,6 +2,8 @@ import { destinations } from "@/data/destinations";
 import type { LlmModelId } from "@/lib/llmModels";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
+export const MAX_TRIP_DAYS = 7;
+
 export interface TripPlannerInput {
   startDate: string;
   endDate: string;
@@ -46,6 +48,40 @@ export interface SavedTripPlan {
 
 const sessionKey = "thaitrip-anon-session-id";
 
+const parseDateOnly = (value: string) => {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
+export const getTripDayCount = (startDate: string, endDate: string) => {
+  const start = parseDateOnly(startDate);
+  const end = parseDateOnly(endDate);
+  if (!start || !end) return 0;
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Math.floor((end.getTime() - start.getTime()) / dayMs) + 1;
+};
+
+export const getMaxTripEndDate = (startDate: string) => {
+  const start = parseDateOnly(startDate);
+  if (!start) return startDate;
+
+  const maxEnd = new Date(start);
+  maxEnd.setDate(start.getDate() + MAX_TRIP_DAYS - 1);
+  return maxEnd.toISOString().slice(0, 10);
+};
+
+export const normalizeTripPlannerInput = (input: TripPlannerInput): TripPlannerInput => {
+  const start = parseDateOnly(input.startDate);
+  const end = parseDateOnly(input.endDate);
+  const maxEndDate = getMaxTripEndDate(input.startDate);
+
+  return {
+    ...input,
+    endDate: !start || !end || end < start ? input.startDate : end > parseDateOnly(maxEndDate)! ? maxEndDate : input.endDate,
+  };
+};
+
 export const getAnonymousSessionId = () => {
   const existing = localStorage.getItem(sessionKey);
   if (existing) return existing;
@@ -60,7 +96,8 @@ export const getAnonymousSessionId = () => {
 };
 
 export const buildTripPlannerPrompt = (input: TripPlannerInput) => {
-  const baseDestination = destinations.find((item) => item.id === input.baseDestinationId) ?? destinations[0];
+  const normalized = normalizeTripPlannerInput(input);
+  const baseDestination = destinations.find((item) => item.id === normalized.baseDestinationId) ?? destinations[0];
   const knownPlaces = destinations
     .map((item) => `${item.name} (${item.region}, ${item.category}, crowd popularity ${item.basePopularity})`)
     .join("; ");
@@ -70,19 +107,22 @@ export const buildTripPlannerPrompt = (input: TripPlannerInput) => {
 Create a practical travel itinerary in Thai. Use only valid JSON. No markdown. No commentary outside JSON.
 
 Traveler request:
-- Travel dates: ${input.startDate} to ${input.endDate}
+- Travel dates: ${normalized.startDate} to ${normalized.endDate}
+- Number of itinerary days: ${getTripDayCount(normalized.startDate, normalized.endDate)} days maximum
 - Main destination area: ${baseDestination.name}, ${baseDestination.region}
-- Travelers: ${input.travelersCount}
-- Budget in THB: ${input.budget}
-- Interested places/categories: ${input.interests.join(", ") || "not specified"}
-- Travel style: ${input.travelStyle}
-- Transport: ${input.transportMode}
-- Extra notes: ${input.notes || "none"}
+- Travelers: ${normalized.travelersCount}
+- Budget in THB: ${normalized.budget}
+- Interested places/categories: ${normalized.interests.join(", ") || "not specified"}
+- Travel style: ${normalized.travelStyle}
+- Transport: ${normalized.transportMode}
+- Extra notes: ${normalized.notes || "none"}
 
 Known app destinations that should be preferred when relevant:
 ${knownPlaces}
 
 Planning rules:
+- Do not create more than ${MAX_TRIP_DAYS} days.
+- The days array must include only dates from ${normalized.startDate} to ${normalized.endDate}.
 - Keep the plan realistic for Thailand travel.
 - Avoid packing too many places into a day.
 - Mention crowd-aware timing, especially morning or late afternoon windows.
