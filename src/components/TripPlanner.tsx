@@ -40,12 +40,16 @@ const getUserFriendlyPlannerError = (error: unknown) => {
     return "สร้างแผนทริปสำเร็จแล้ว แต่ระบบบันทึกข้อมูลยังไม่พร้อมใช้งาน";
   }
 
-  if (/AI response was cut off|malformed itinerary JSON|JSON|parse|Unexpected|Unterminated/i.test(message)) {
+  if (/AI response was cut off|malformed itinerary JSON|incomplete itinerary|JSON|parse|Unexpected|Unterminated/i.test(message)) {
     return "AI สร้างแผนทริปไม่ครบถ้วน กรุณาลองลดจำนวนวันหรือเปลี่ยน model แล้วลองใหม่";
   }
 
   if (/AI request|Gemini|GOOGLE_AI_KEY|empty trip plan|fetch|network/i.test(message)) {
     return "ยังสร้างแผนทริปไม่ได้ในตอนนี้ กรุณาลองใหม่อีกครั้ง";
+  }
+
+  if (/AI is busy|quota|rate limit|try again in a moment/i.test(message)) {
+    return "AI มีการใช้งานเยอะในตอนนี้ กรุณารอสักครู่แล้วลองใหม่";
   }
 
   return "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
@@ -106,14 +110,14 @@ export const TripPlanner = ({ selectedModel }: { selectedModel: LlmModelId }) =>
           setSavedId(saved.id);
           setStatus("สร้างและบันทึกทริปแล้ว");
         } catch (error) {
-          console.error("Trip plan save failed", error);
+          if (import.meta.env.DEV) console.error("Trip plan save failed", error);
           setStatus(getUserFriendlyPlannerError(error));
         }
       } else {
         setStatus("สร้างแผนทริปสำเร็จแล้ว");
       }
     } catch (error) {
-      console.error("Trip plan generation failed", error);
+      if (import.meta.env.DEV) console.error("Trip plan generation failed", error);
       setStatus(getUserFriendlyPlannerError(error));
     } finally {
       setIsGenerating(false);

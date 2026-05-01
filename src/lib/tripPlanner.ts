@@ -222,11 +222,7 @@ export const requestTripPlan = async (input: TripPlannerInput, model: LlmModelId
     try {
       plan = await repairTripPlanJson(data.text, model);
     } catch {
-      throw new Error(
-        `AI returned malformed itinerary JSON and repair failed: ${
-          error instanceof Error ? error.message : "unknown parse error"
-        }`,
-      );
+      throw new Error("AI returned an incomplete itinerary");
     }
   }
 
