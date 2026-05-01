@@ -26,7 +26,6 @@ const Index = () => {
   const scrollToPredictor = () => predictorRef.current?.scrollIntoView({ behavior: "smooth" });
   const selectDestination = (id: string) => {
     setForm((current) => ({ ...current, destinationId: id }));
-    scrollToPredictor();
   };
 
   const { destination, result, selectedHour } = useMemo(() => {
@@ -70,7 +69,7 @@ const Index = () => {
         <section id="predictor" ref={predictorRef} className="max-w-7xl mx-auto px-6 md:px-10 pb-20">
           <div className="mb-8">
             <div className="text-xs uppercase tracking-widest text-neon-pink font-bold mb-2">Predictor</div>
-            <h2 className="font-display text-4xl md:text-5xl">เลือกสถานที่ · วัน · เวลา</h2>
+            <h2 className="font-display text-4xl md:text-5xl">Choose place, date, and time</h2>
           </div>
 
           <PredictorForm
@@ -104,7 +103,7 @@ const Index = () => {
 
       <footer className="border-t border-white/5 py-10 px-6 md:px-10">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs uppercase tracking-widest text-muted-foreground">
-          <span>© 2026 KRUNG.AI · Crowd Predictor for Thailand Tourism</span>
+          <span>(c) 2026 KRUNG.AI · Crowd Predictor for Thailand Tourism</span>
           <span>ML + AI Agent + LLM + Recommendation System</span>
         </div>
       </footer>

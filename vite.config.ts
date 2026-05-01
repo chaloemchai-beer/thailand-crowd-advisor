@@ -184,6 +184,99 @@ const weatherProxy = (apiKey?: string): Plugin => ({
   },
 });
 
+const osmPlaceHandler = async (
+  req: import("http").IncomingMessage,
+  res: import("http").ServerResponse,
+  next: () => void,
+) => {
+  if (req.method !== "GET") return next();
+
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=604800");
+
+  try {
+    const requestUrl = new URL(req.url ?? "", "http://localhost");
+    const q = requestUrl.searchParams.get("q");
+    const lat = requestUrl.searchParams.get("lat");
+    const lng = requestUrl.searchParams.get("lng");
+
+    if (!q) {
+      res.statusCode = 400;
+      res.end(JSON.stringify({ error: "Missing q" }));
+      return;
+    }
+
+    const params = new URLSearchParams({
+      q,
+      format: "jsonv2",
+      limit: "1",
+      addressdetails: "1",
+      namedetails: "1",
+      extratags: "1",
+      countrycodes: "th",
+    });
+
+    if (lat && lng) {
+      const delta = 0.08;
+      const latNum = Number(lat);
+      const lngNum = Number(lng);
+      params.set("viewbox", `${lngNum - delta},${latNum + delta},${lngNum + delta},${latNum - delta}`);
+      params.set("bounded", "1");
+    }
+
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+      headers: {
+        "Accept-Language": "th,en",
+        "User-Agent": "thailand-crowd-advisor/1.0 (OpenStreetMap attribution; local-dev)",
+        Referer: "http://localhost:8080",
+      },
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      res.statusCode = response.status;
+      res.end(JSON.stringify({ error: "OpenStreetMap Nominatim request failed" }));
+      return;
+    }
+
+    if (!Array.isArray(data) || data.length === 0) {
+      res.statusCode = 404;
+      res.end(JSON.stringify({ error: "No OpenStreetMap place found" }));
+      return;
+    }
+
+    const item = data[0];
+    res.end(
+      JSON.stringify({
+        displayName: item.display_name,
+        lat: Number(item.lat),
+        lng: Number(item.lon),
+        osmType: item.osm_type,
+        osmId: item.osm_id,
+        class: item.class,
+        type: item.type,
+        importance: item.importance,
+        address: item.address,
+        licence: item.licence,
+        source: "openstreetmap",
+      }),
+    );
+  } catch (error) {
+    res.statusCode = 500;
+    res.end(JSON.stringify({ error: error instanceof Error ? error.message : "OpenStreetMap proxy failed" }));
+  }
+};
+
+const osmPlaceProxy = (): Plugin => ({
+  name: "local-osm-place-proxy",
+  configureServer(server) {
+    server.middlewares.use("/api/osm-place", osmPlaceHandler);
+  },
+  configurePreviewServer(server) {
+    server.middlewares.use("/api/osm-place", osmPlaceHandler);
+  },
+});
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -201,7 +294,7 @@ export default defineConfig(({ mode }) => {
         overlay: false,
       },
     },
-    plugins: [react(), aiAdvisorProxy(googleAiKey, googleAiModel), weatherProxy(weatherApiKey), mode === "development" && componentTagger()].filter(Boolean),
+    plugins: [react(), aiAdvisorProxy(googleAiKey, googleAiModel), weatherProxy(weatherApiKey), osmPlaceProxy(), mode === "development" && componentTagger()].filter(Boolean),
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
