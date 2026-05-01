@@ -7,7 +7,10 @@ import { PredictionDashboard } from "@/components/PredictionDashboard";
 import { HowItWorks } from "@/components/HowItWorks";
 import { AIAdvisorPanel } from "@/components/AIAdvisorPanel";
 import { DestinationExplorer } from "@/components/DestinationExplorer";
+import { LlmModelSelect } from "@/components/LlmModelSelect";
+import { TripPlanner } from "@/components/TripPlanner";
 import { destinations } from "@/data/destinations";
+import { defaultLlmModel, type LlmModelId } from "@/lib/llmModels";
 import { predict } from "@/lib/predictor";
 import { fetchDestinationWeather, type WeatherForecast } from "@/lib/weather";
 
@@ -21,6 +24,7 @@ const Index = () => {
   });
   const [weatherForecast, setWeatherForecast] = useState<WeatherForecast>();
   const [isWeatherLoading, setIsWeatherLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<LlmModelId>(defaultLlmModel);
 
   const predictorRef = useRef<HTMLDivElement>(null);
   const scrollToPredictor = () => predictorRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -69,7 +73,12 @@ const Index = () => {
         <section id="predictor" ref={predictorRef} className="max-w-7xl mx-auto px-6 md:px-10 pb-20">
           <div className="mb-8">
             <div className="text-xs uppercase tracking-widest text-neon-pink font-bold mb-2">Predictor</div>
-            <h2 className="font-display text-4xl md:text-5xl">Choose place, date, and time</h2>
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <h2 className="font-display text-4xl md:text-5xl">Choose place, date, and time</h2>
+              <div className="w-full md:w-[320px]">
+                <LlmModelSelect value={selectedModel} onChange={setSelectedModel} />
+              </div>
+            </div>
           </div>
 
           <PredictorForm
@@ -93,17 +102,19 @@ const Index = () => {
               time={form.time}
               weather={form.weather}
               weatherForecast={weatherForecast}
+              selectedModel={selectedModel}
             />
           </div>
         </section>
 
         <DestinationExplorer selectedId={form.destinationId} onSelect={selectDestination} />
+        <TripPlanner selectedModel={selectedModel} />
         <HowItWorks />
       </main>
 
       <footer className="border-t border-white/5 py-10 px-6 md:px-10">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs uppercase tracking-widest text-muted-foreground">
-          <span>(c) 2026 KRUNG.AI · Crowd Predictor for Thailand Tourism</span>
+          <span>(c) 2026 ThaiTrip Guardian · Crowd Predictor for Thailand Tourism</span>
           <span>ML + AI Agent + LLM + Recommendation System</span>
         </div>
       </footer>

@@ -3,6 +3,7 @@ import { Bot, Database, Loader2, Send, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Destination } from "@/data/destinations";
+import type { LlmModelId } from "@/lib/llmModels";
 import type { PredictionResult } from "@/lib/predictor";
 import { getAgentRecommendations, requestAiAdvisor } from "@/lib/aiAdvisor";
 import type { WeatherForecast, WeatherKind } from "@/lib/weather";
@@ -15,6 +16,7 @@ export const AIAdvisorPanel = ({
   time,
   weather,
   weatherForecast,
+  selectedModel,
 }: {
   destination: Destination;
   result: PredictionResult;
@@ -22,6 +24,7 @@ export const AIAdvisorPanel = ({
   time: string;
   weather: WeatherKind;
   weatherForecast?: WeatherForecast;
+  selectedModel: LlmModelId;
 }) => {
   const [question, setQuestion] = useState("ควรไปเวลานี้ไหม ถ้าไม่ควรไป แนะนำเวลาไหนหรือสถานที่ไหนแทน");
   const [answer, setAnswer] = useState("");
@@ -29,7 +32,7 @@ export const AIAdvisorPanel = ({
   const [model, setModel] = useState<string>();
   const [isLoading, setIsLoading] = useState(false);
 
-  const contextKey = `${destination.id}-${date}-${time}-${weather}-${result.pct}-${weatherForecast?.condition ?? ""}`;
+  const contextKey = `${destination.id}-${date}-${time}-${weather}-${result.pct}-${weatherForecast?.condition ?? ""}-${selectedModel}`;
   const recommendations = useMemo(
     () => getAgentRecommendations({ destination, result, date, time, weather, weatherForecast }),
     [destination, result, date, time, weather, weatherForecast],
@@ -43,7 +46,7 @@ export const AIAdvisorPanel = ({
 
   const askAi = async () => {
     setIsLoading(true);
-    const response = await requestAiAdvisor({ destination, result, date, time, weather, weatherForecast, question });
+    const response = await requestAiAdvisor({ destination, result, date, time, weather, weatherForecast, question }, selectedModel);
     setAnswer(response.text);
     setSource(response.source);
     setModel(response.model);
@@ -80,6 +83,9 @@ export const AIAdvisorPanel = ({
             </div>
             <div>
               <h3 className="font-display text-2xl tracking-wider">AI Assistant</h3>
+              <div className="mt-1 inline-flex rounded-full border border-white/10 bg-background/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-neon-cyan">
+                {selectedModel}
+              </div>
               <p className="text-xs text-muted-foreground">
                 {source === "gemini"
                   ? `ตอบจริงด้วย Google AI${model ? ` (${model})` : ""}`

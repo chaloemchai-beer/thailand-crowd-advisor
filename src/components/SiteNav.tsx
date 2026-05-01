@@ -1,17 +1,19 @@
-import { Activity } from "lucide-react";
+import brandLogo from "@/assets/thaitrip-guardian-logo.png";
 
 export const SiteNav = () => (
   <nav className="sticky top-0 z-50 flex items-center justify-between px-6 md:px-10 py-5 border-b border-white/5 bg-background/70 backdrop-blur-xl">
-    <a href="#" className="flex items-center gap-3">
-      <span className="relative flex size-8 items-center justify-center rounded-full bg-neon-pink neon-glow-pink animate-pulse-glow">
-        <Activity className="size-4 text-background" strokeWidth={3} />
-      </span>
-      <span className="font-display text-2xl tracking-[0.18em] text-foreground">
-        KRUNG<span className="text-neon-pink">.</span>AI
-      </span>
+    <a href="#" className="flex items-center">
+      <img
+        src={brandLogo}
+        alt="ThaiTrip Guardian"
+        width={1172}
+        height={500}
+        className="h-12 w-auto sm:h-14"
+      />
     </a>
     <div className="hidden md:flex items-center gap-8 text-xs font-medium uppercase tracking-widest">
       <a href="#predictor" className="text-neon-cyan hover:opacity-80 transition-opacity">Live Pulse</a>
+      <a href="#planner" className="text-muted-foreground hover:text-foreground transition-colors">Trip Planner</a>
       <a href="#how" className="text-muted-foreground hover:text-foreground transition-colors">How it works</a>
       <a href="#destinations" className="text-muted-foreground hover:text-foreground transition-colors">Destinations</a>
     </div>

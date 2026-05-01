@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
+const allowedAiModels = new Set(["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"]);
+
 const readJsonBody = (req: import("http").IncomingMessage) =>
   new Promise<Record<string, unknown>>((resolve, reject) => {
     let raw = "";
@@ -42,7 +44,12 @@ const aiAdvisorHandler =
 
       try {
         const body = await readJsonBody(req);
-        const prompt = String(body.prompt ?? "").slice(0, 6000);
+        const prompt = String(body.prompt ?? "").slice(0, 12_000);
+        const requestedModel = typeof body.model === "string" ? body.model : model;
+        const selectedModel = allowedAiModels.has(requestedModel) ? requestedModel : model;
+        const maxOutputTokens = Math.min(Math.max(Number(body.maxOutputTokens ?? 420), 128), 6000);
+        const temperature = Math.min(Math.max(Number(body.temperature ?? 0.35), 0), 1);
+        const responseMimeType = typeof body.responseMimeType === "string" ? body.responseMimeType : undefined;
         if (!prompt.trim()) {
           res.statusCode = 400;
           res.end(JSON.stringify({ error: "Missing prompt" }));
@@ -50,15 +57,16 @@ const aiAdvisorHandler =
         }
 
         const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               contents: [{ role: "user", parts: [{ text: prompt }] }],
               generationConfig: {
-                temperature: 0.35,
-                maxOutputTokens: 420,
+                temperature,
+                maxOutputTokens,
+                ...(responseMimeType ? { responseMimeType } : {}),
               },
             }),
           },
@@ -71,12 +79,13 @@ const aiAdvisorHandler =
           return;
         }
 
-        const text = data?.candidates?.[0]?.content?.parts
+        const candidate = data?.candidates?.[0];
+        const text = candidate?.content?.parts
           ?.map((part: { text?: string }) => part.text ?? "")
           .join("")
           .trim();
 
-        res.end(JSON.stringify({ text, model }));
+        res.end(JSON.stringify({ text, model: selectedModel, finishReason: candidate?.finishReason }));
       } catch (error) {
         res.statusCode = 500;
         res.end(JSON.stringify({ error: error instanceof Error ? error.message : "AI proxy failed" }));
@@ -292,6 +301,16 @@ export default defineConfig(({ mode }) => {
       port: 8080,
       hmr: {
         overlay: false,
+      },
+    },
+    envPrefix: ["VITE_", "NEXT_PUBLIC_"],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            supabase: ["@supabase/supabase-js"],
+          },
+        },
       },
     },
     plugins: [react(), aiAdvisorProxy(googleAiKey, googleAiModel), weatherProxy(weatherApiKey), osmPlaceProxy(), mode === "development" && componentTagger()].filter(Boolean),

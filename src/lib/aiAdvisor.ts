@@ -2,6 +2,7 @@ import type { Destination } from "@/data/destinations";
 import type { PredictionResult } from "@/lib/predictor";
 import type { WeatherForecast, WeatherKind } from "@/lib/weather";
 import { weatherLabel } from "@/lib/weather";
+import type { LlmModelId } from "@/lib/llmModels";
 
 export interface AdvisorContext {
   destination: Destination;
@@ -125,12 +126,12 @@ ${recommendations.map((item) => `- ${item}`).join("\n")}
 ${context.question || "ควรไปไหม ถ้าไม่ควรไปควรเลือกเวลาไหนหรือสถานที่ไหนแทน"}`;
 }
 
-export async function requestAiAdvisor(context: AdvisorContext): Promise<AdvisorResponse> {
+export async function requestAiAdvisor(context: AdvisorContext, model: LlmModelId): Promise<AdvisorResponse> {
   try {
     const response = await fetch("/api/ai-advisor", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: buildAdvisorPrompt(context) }),
+      body: JSON.stringify({ prompt: buildAdvisorPrompt(context), model }),
     });
 
     const data = (await response.json().catch(() => ({}))) as { text?: string; model?: string; error?: string };
