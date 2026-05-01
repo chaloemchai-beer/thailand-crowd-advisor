@@ -15,18 +15,18 @@ export const Heatmap = ({
 }) => (
   <div>
     <div className="grid grid-cols-24 gap-1 h-40 items-end" style={{ gridTemplateColumns: "repeat(24, minmax(0, 1fr))" }}>
-      {hourly.map((h) => {
-        const isSelected = h.hour === selectedHour;
+      {hourly.map((hour) => {
+        const isSelected = hour.hour === selectedHour;
         return (
-          <div key={h.hour} className="flex flex-col items-center gap-1 h-full justify-end">
+          <div key={hour.hour} className="flex flex-col items-center gap-1 h-full justify-end">
             <div
               className={`w-full rounded-sm transition-all ${isSelected ? "ring-2 ring-foreground" : ""}`}
               style={{
-                height: `${Math.max(6, h.score * 100)}%`,
-                background: colorFor(h.level, h.score),
-                boxShadow: h.level === "high" ? `0 0 12px ${colorFor(h.level, h.score)}` : "none",
+                height: `${Math.max(6, hour.score * 100)}%`,
+                background: colorFor(hour.level, hour.score),
+                boxShadow: hour.level === "high" ? `0 0 12px ${colorFor(hour.level, hour.score)}` : "none",
               }}
-              title={`${String(h.hour).padStart(2, "0")}:00 — ${Math.round(h.score * 100)}%`}
+              title={`${String(hour.hour).padStart(2, "0")}:00 - ${Math.round(hour.score * 100)}%`}
             />
           </div>
         );

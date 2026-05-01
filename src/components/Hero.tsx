@@ -34,10 +34,10 @@ export const Hero = ({ onStart }: { onStart: () => void }) => (
               onClick={onStart}
               className="px-7 py-3.5 rounded-full bg-neon-pink text-white font-bold uppercase text-sm tracking-tight hover:scale-[0.98] transition-transform neon-glow-pink"
             >
-              เริ่มทำนายเลย →
+              เริ่มทำนายเลย
             </button>
-            <a href="#how" className="text-sm text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest font-medium">
-              How it works
+            <a href="#destinations" className="text-sm text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest font-medium">
+              Browse destinations
             </a>
           </div>
         </div>
@@ -47,10 +47,10 @@ export const Hero = ({ onStart }: { onStart: () => void }) => (
             { label: "Destinations", value: "10+", color: "text-neon-cyan" },
             { label: "Factors analyzed", value: "6", color: "text-neon-amber" },
             { label: "Hourly forecast", value: "24h", color: "text-neon-pink" },
-          ].map((s) => (
-            <div key={s.label} className="glass-panel p-5">
-              <div className={`font-display text-4xl ${s.color}`}>{s.value}</div>
-              <div className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">{s.label}</div>
+          ].map((stat) => (
+            <div key={stat.label} className="glass-panel p-5">
+              <div className={`font-display text-4xl ${stat.color}`}>{stat.value}</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">{stat.label}</div>
             </div>
           ))}
         </div>
